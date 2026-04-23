@@ -1,42 +1,48 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
+print(">>> main.py imported")
+
 app = FastAPI()
 clients = []
 
 @app.on_event("startup")
 async def show_routes():
+    print(">>> startup event triggered")
     print("=== ROUTES LOADED ===")
     for route in app.routes:
         print(type(route).__name__, getattr(route, "path", None))
 
 @app.get("/")
 def home():
+    print(">>> GET / called")
     return {"status": "server online"}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    print(">>> /ws endpoint reached before accept")
     await websocket.accept()
     clients.append(websocket)
-    print("WebSocket client connected")
+    print(">>> WebSocket client connected")
 
     try:
         while True:
             data = await websocket.receive_text()
-            print("Received:", data)
+            print(">>> Received:", data)
 
             for client in clients[:]:
                 if client != websocket:
                     try:
                         await client.send_text(data)
-                    except Exception:
+                    except Exception as e:
+                        print(">>> send error:", e)
                         if client in clients:
                             clients.remove(client)
 
     except WebSocketDisconnect:
-        print("WebSocket disconnected")
+        print(">>> WebSocket disconnected")
         if websocket in clients:
             clients.remove(websocket)
     except Exception as e:
-        print("WebSocket error:", e)
+        print(">>> WebSocket error:", e)
         if websocket in clients:
             clients.remove(websocket)
